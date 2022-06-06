@@ -5,12 +5,12 @@
 
       </div>
     </div>
-    <div class="Code-Line-Container">
+    <div class="Code-Line-Container" @click="codeLineContainerClick">
       <div class="Code-Line">
 
       </div>
+      <textarea ref="codeInput" class="Code-Input" :style="codeInputStyle" @input="codeInput"></textarea>
     </div>
-    <textarea class="Code-Input"></textarea>
   </div>
 </template>
 
@@ -21,7 +21,30 @@ import { Options, Vue } from 'vue-class-component';
   components: {
   },
 })
-export default class CodeEditor extends Vue {}
+export default class CodeEditor extends Vue {
+
+  codeInputStyle = {
+    left:"0px",
+    top:"0px"
+  }
+
+  declare $refs : {
+    codeInput: HTMLInputElement
+  }
+
+  codeLineContainerClick(event:PointerEvent){
+    const offsetX = event.offsetX
+    const offsetY = event.offsetY
+    this.codeInputStyle.left = offsetX + "px"
+    this.codeInputStyle.top = offsetY + "px"
+    this.$refs.codeInput.focus()
+  }
+
+  codeInput(event:Event){
+    debugger
+  }
+
+}
 </script>
 
 <style lang="scss" scoped>
@@ -36,13 +59,27 @@ export default class CodeEditor extends Vue {}
     width: 50px;
     min-width: 50px;
     border: 1px solid;
+    display: inline-block;
 
     .Code-Line-Number{
-
+      
     }
   }
 
+  .Code-Line-Container{
+    height: 100%;
+    width: calc(100% - 55px);
+    border: 1px solid;
+    display: inline-block;
+    position: relative;
+  }
 
+  .Code-Input{
+    position: absolute;
+    //border: none;
+    outline: none;
+    resize: none;
+  }
   .Code-Input::after {
     content:'';
     display: block;
@@ -50,7 +87,6 @@ export default class CodeEditor extends Vue {}
     height:16px;
     animation: blink 1s infinite steps(1, start)
   }
-
   @keyframes blink {
     0%{
       background-color: white;

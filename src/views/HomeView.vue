@@ -15,3 +15,9 @@ import CodeEditor from '@/components/CodeEditor.vue'
 })
 export default class HomeView extends Vue {}
 </script>
+
+<style lang="scss" scoped>
+  .home{
+    height: 95vh;
+  }
+</style>
