@@ -1,15 +1,17 @@
 <template>
   <div class="Code-Editor">
     <div class="Code-Line-Number-Container">
-      <div class="Code-Line-Number">
-
+      <div class="Code-Line-Number" v-for="(codeLine,index) in codeLines" :key="index">
+        {{index + 1}}
       </div>
     </div>
-    <div class="Code-Line-Container" @click="codeLineContainerClick">
-      <div class="Code-Line">
-
+    <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
+      <div class="Code-Line" v-for="(codeLine,index) in codeLines" :key="index">
+        <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
+          {{token.value}}
+        </span>
       </div>
-      <textarea ref="codeInput" class="Code-Input" :style="codeInputStyle" @input="codeInput"></textarea>
+      <textarea class="Code-Input" :style="codeInputStyle" @input="codeInput"></textarea>
     </div>
   </div>
 </template>
@@ -28,8 +30,10 @@ export default class CodeEditor extends Vue {
     top:"0px"
   }
 
-  declare $refs : {
-    codeInput: HTMLInputElement
+  codeLines: any = []
+
+  created(){
+    this.codeLines.push({type:"error",value:""})
   }
 
   codeLineContainerClick(event:PointerEvent){
@@ -37,11 +41,16 @@ export default class CodeEditor extends Vue {
     const offsetY = event.offsetY
     this.codeInputStyle.left = offsetX + "px"
     this.codeInputStyle.top = offsetY + "px"
-    this.$refs.codeInput.focus()
+  }
+
+  codeLineContainerKeyDown(event:KeyboardEvent){
+    if(event.key == "Enter"){
+      this.codeLines.push({type:"error",value:""})
+    }
   }
 
   codeInput(event:Event){
-    debugger
+    console.log(event)
   }
 
 }
@@ -52,31 +61,34 @@ export default class CodeEditor extends Vue {
   width: 100%;
   height: 100%;
   border-radius: 4px;
-  cursor: text;
+  background-color: rgb(30,30,30);
+  font-size: 14px;
+  display: flex;
+  overflow: auto;
 
   .Code-Line-Number-Container{
     height: 100%;
     width: 50px;
     min-width: 50px;
-    border: 1px solid;
-    display: inline-block;
 
     .Code-Line-Number{
-      
+      color: rgb(133,133,133);
+      text-align: center;
     }
   }
 
   .Code-Line-Container{
+    cursor: text;
     height: 100%;
     width: calc(100% - 55px);
-    border: 1px solid;
-    display: inline-block;
     position: relative;
   }
 
   .Code-Input{
     position: absolute;
-    //border: none;
+    height: 20px;
+    width: 1px;
+    border: none;
     outline: none;
     resize: none;
   }
