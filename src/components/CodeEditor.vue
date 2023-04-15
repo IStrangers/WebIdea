@@ -11,12 +11,13 @@
           {{token.value}}
         </span>
       </div>
-      <textarea class="Code-Input" :style="codeInputStyle" @input="codeInput"></textarea>
+      <div class="Cursor" :style="cursorStyle"></div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+import { reactive } from 'vue';
 import { Options, Vue } from 'vue-class-component';
 
 @Options({
@@ -25,38 +26,59 @@ import { Options, Vue } from 'vue-class-component';
 })
 export default class CodeEditor extends Vue {
 
-  codeInputStyle = {
-    left:"0px",
-    top:"0px"
+  cursorStyle: any = {
+    position: "absolute",
+    left: "0px",
+    top: "0px"
   }
 
   codeLines: any = []
+  currentLine: any
 
   created(){
-    this.codeLines.push({type:"error",value:""})
+    const currentLine = this.createNewLine()
+    this.codeLines.push(currentLine)
   }
 
-  codeLineContainerClick(event:PointerEvent){
+  createNewLine() {
+    this.currentLine = reactive({
+        tokens:[]
+    })
+    return this.currentLine
+  }
+
+  codeLineContainerClick(event: any){
     const offsetX = event.offsetX
     const offsetY = event.offsetY
-    this.codeInputStyle.left = offsetX + "px"
-    this.codeInputStyle.top = offsetY + "px"
+    this.cursorStyle.left = offsetX + "px"
+    this.cursorStyle.top = offsetY + "px"
   }
 
-  codeLineContainerKeyDown(event:KeyboardEvent){
-    if(event.key == "Enter"){
-      this.codeLines.push({type:"error",value:""})
+  codeLineContainerKeyDown(event: any){
+    debugger
+    if(event.key === "Enter"){
+      const currentLine = this.createNewLine()
+      this.codeLines.push(currentLine)
+    } else if(event.key === "Backspace") {
+      this.currentLine.tokens.splice(this.currentLine.tokens.length - 1,1)
+    } else {
+      const data = event.data
+      this.currentLine.tokens.push({
+        type: "error",
+        value: data
+      })
     }
   }
-
-  codeInput(event:Event){
-    console.log(event)
-  }
-
 }
 </script>
 
 <style lang="scss" scoped>
+@keyframes cursor {
+  0% { opacity: 0; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 .Code-Editor {
   width: 100%;
   height: 100%;
@@ -68,12 +90,15 @@ export default class CodeEditor extends Vue {
 
   .Code-Line-Number-Container{
     height: 100%;
-    width: 50px;
-    min-width: 50px;
+    width: 35px;
+    min-width: 35px;
+    border-right: 1px solid rgba(133, 133, 133,.3);
 
     .Code-Line-Number{
       color: rgb(133,133,133);
       text-align: center;
+      height: 20px;
+      line-height: 20px;
     }
   }
 
@@ -82,6 +107,27 @@ export default class CodeEditor extends Vue {
     height: 100%;
     width: calc(100% - 55px);
     position: relative;
+
+    .Code-Line {
+      height: 20px;
+      line-height: 20px;
+      padding: 0 5px;
+
+      span {
+        color: rgb(133, 133, 133);
+        &.error {
+          color: red;
+        }
+      }
+    }
+
+    .Cursor {
+      width: 2px;
+      height: 20px;
+      background-color: rgb(133, 133, 133);
+      display: inline-block;
+      animation: cursor 1s ease infinite;
+    }
   }
 
   .Code-Input{
@@ -98,17 +144,6 @@ export default class CodeEditor extends Vue {
     width:1px;
     height:16px;
     animation: blink 1s infinite steps(1, start)
-  }
-  @keyframes blink {
-    0%{
-      background-color: white;
-    }
-    50% {
-      background-color: black;
-    }
-    100% {
-      background-color: white;
-    }
   }
 }
 </style>
