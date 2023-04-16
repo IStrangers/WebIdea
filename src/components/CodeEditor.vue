@@ -67,14 +67,18 @@ const updateCursorOffset = (offsetX: number | null,offsetY: number | null) => {
 }
 
 const updateCursorPosition = () => {
-  let offsetY = (codeLines.length - 1) * codeLineHeight
-  offsetY = offsetY < 0 ? 0 : offsetY
+  let maxOffsetY = codeLines.length > 1 ? (codeLines.length - 1) * codeLineHeight : 0
+
   let offsetX = cursorOffsetX.value
   offsetX = offsetX < 0 ? 0 : offsetX
-
-  if(cursorOffsetY.value < offsetY) {
+  let offsetY;
+  if(maxOffsetY > cursorOffsetY.value) {
     offsetY = cursorOffsetY.value
+  } else {
+    offsetY = maxOffsetY
+    offsetX = getCurrentLineWidth()
   }
+
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
 }
@@ -171,7 +175,7 @@ onMounted(() => {
     .Code-Line {
       height: 20px;
       line-height: 20px;
-      // padding: 0 5px;
+
       &.selected {
         border-top: 1px solid rgb(133, 133, 133,.2);
         border-bottom: 1px solid rgb(133, 133, 133,.2);
