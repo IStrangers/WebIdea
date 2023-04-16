@@ -16,10 +16,11 @@
       </div>
     </div>
   </div>
+  <canvas></canvas>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue'
 
 const codeLineHeight = 20
 const fontSizeWidth = 8
@@ -37,21 +38,29 @@ const cursorStyle: any = reactive({
 })
 const cursorInput = ref<HTMLTextAreaElement>()
 
+const getTextWidth = (text: string) => {
+  const canvas: HTMLCanvasElement = document.createElement('canvas')
+  const ctx: any = canvas.getContext('2d')
+  ctx.font = '14px Microsoft YaHei'
+  const textWidth = ctx.measureText(text).width
+  return textWidth
+}
+
 const createNewLine = () => {
   currentLine.value = reactive({
     key: codeLines.length + 1,
     tokens:[]
   })
   codeLines.push(currentLine.value)
-  updateCursorOffset(null,codeLines.length * codeLineHeight)
+  updateCursorOffset(0,codeLines.length * codeLineHeight)
   return currentLine
 }
 
 const updateCursorOffset = (offsetX: number | null,offsetY: number | null) => {
-  if(offsetX) {
+  if(offsetX !== null) {
     cursorOffsetX.value = offsetX
   }
-  if(offsetY) {
+  if(offsetY !== null) {
     cursorOffsetY.value = offsetY
   }
   updateCursorPosition()
@@ -60,15 +69,20 @@ const updateCursorOffset = (offsetX: number | null,offsetY: number | null) => {
 const updateCursorPosition = () => {
   let offsetY = (codeLines.length - 1) * codeLineHeight
   offsetY = offsetY < 0 ? 0 : offsetY
-  let offsetX = currentLine.value ? (currentLine.value.tokens.length - 1) * fontSizeWidth : 0
+  let offsetX = cursorOffsetX.value
   offsetX = offsetX < 0 ? 0 : offsetX
 
   if(cursorOffsetY.value < offsetY) {
     offsetY = cursorOffsetY.value
-    offsetX = cursorOffsetX.value > offsetX ? offsetX : cursorOffsetX.value
   }
+  console.log(offsetX)
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
+}
+
+const getCurrentLineWidth = () => {
+  const lineWidth = currentLine.value ? currentLine.value.tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
+  return lineWidth
 }
 
 const codeLineContainerClick = (event: any) => {
@@ -88,7 +102,7 @@ const codeLineContainerKeyDown = (event: any) => {
       currentLine.value.tokens.splice(currentLine.value.tokens.length - 1,1)
     }
     cursorIndex.value = currentLine.value.tokens.length
-    updateCursorOffset(cursorIndex.value * fontSizeWidth,codeLines.length * codeLineHeight)
+    updateCursorOffset(getCurrentLineWidth(),codeLines.length * codeLineHeight)
     event.preventDefault()
   }
 }
@@ -97,13 +111,14 @@ const inputHander = (event: any) => {
   const data = event.data
   currentLine.value.tokens.splice(cursorIndex.value,0,{
     type: "",
-    value: data
+    value: data,
+    width: data ? getTextWidth(data) : 0
   })
   if(cursorInput.value) {
     cursorInput.value.value = ""
   }
   cursorIndex.value = currentLine.value.tokens.length
-  updateCursorOffset(cursorIndex.value * fontSizeWidth,null)
+  updateCursorOffset(getCurrentLineWidth(),null)
 }
 const codeInput = (event: any) => {
   if("insertCompositionText" === event.inputType) {
