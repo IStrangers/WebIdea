@@ -12,7 +12,7 @@
         </span>
       </div>
       <div class="Cursor" :style="cursorStyle">
-        <textarea ref="cursorInput" autofocus="true" @input="codeInput"></textarea>
+        <textarea ref="cursorInput" autofocus="true" @input="codeInput" @compositionend="inputHander"></textarea>
       </div>
     </div>
   </div>
@@ -93,7 +93,7 @@ const codeLineContainerKeyDown = (event: any) => {
   }
 }
 
-const codeInput = (event: any) => {
+const inputHander = (event: any) => {
   const data = event.data
   currentLine.value.tokens.splice(cursorIndex.value,0,{
     type: "",
@@ -104,6 +104,12 @@ const codeInput = (event: any) => {
   }
   cursorIndex.value = currentLine.value.tokens.length
   updateCursorOffset(cursorIndex.value * fontSizeWidth,null)
+}
+const codeInput = (event: any) => {
+  if("insertCompositionText" === event.inputType) {
+    return
+  }
+  inputHander(event)
 }
 
 onMounted(() => {
