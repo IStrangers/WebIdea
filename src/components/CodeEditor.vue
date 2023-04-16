@@ -6,70 +6,109 @@
       </div>
     </div>
     <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
-      <div class="Code-Line" v-for="(codeLine,index) in codeLines" :key="index">
+      <div :class="['Code-Line',currentLine.key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
         <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
           {{token.value}}
         </span>
       </div>
-      <div class="Cursor" :style="cursorStyle"></div>
+      <div class="Cursor" :style="cursorStyle">
+        <textarea ref="cursorInput" autofocus="true" @input="codeInput"></textarea>
+      </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { reactive } from 'vue';
-import { Options, Vue } from 'vue-class-component';
+<script lang="ts" setup>
+import { onMounted, reactive, ref } from 'vue';
 
-@Options({
-  components: {
-  },
+const codeLineHeight = 20
+const fontSizeWidth = 8
+
+const codeLines: any = reactive([])
+let currentLine: any = ref()
+
+const cursorOffsetX = ref<number>(0)
+const cursorOffsetY = ref<number>(0)
+const cursorIndex = ref<number>(0)
+const cursorStyle: any = reactive({
+  position: "absolute",
+  left: "0px",
+  top: "0px"
 })
-export default class CodeEditor extends Vue {
+const cursorInput = ref<HTMLTextAreaElement>()
 
-  cursorStyle: any = {
-    position: "absolute",
-    left: "0px",
-    top: "0px"
+const createNewLine = () => {
+  currentLine.value = reactive({
+    key: codeLines.length + 1,
+    tokens:[]
+  })
+  codeLines.push(currentLine.value)
+  updateCursorOffset(null,codeLines.length * codeLineHeight)
+  return currentLine
+}
+
+const updateCursorOffset = (offsetX: number | null,offsetY: number | null) => {
+  if(offsetX) {
+    cursorOffsetX.value = offsetX
   }
-
-  codeLines: any = []
-  currentLine: any
-
-  created(){
-    const currentLine = this.createNewLine()
-    this.codeLines.push(currentLine)
+  if(offsetY) {
+    cursorOffsetY.value = offsetY
   }
+  updateCursorPosition()
+}
 
-  createNewLine() {
-    this.currentLine = reactive({
-        tokens:[]
-    })
-    return this.currentLine
+const updateCursorPosition = () => {
+  let offsetY = (codeLines.length - 1) * codeLineHeight
+  offsetY = offsetY < 0 ? 0 : offsetY
+  let offsetX = currentLine.value ? (currentLine.value.tokens.length - 1) * fontSizeWidth : 0
+  offsetX = offsetX < 0 ? 0 : offsetX
+
+  if(cursorOffsetY.value < offsetY) {
+    offsetY = cursorOffsetY.value
+    offsetX = cursorOffsetX.value > offsetX ? offsetX : cursorOffsetX.value
   }
+  cursorStyle.left = offsetX + "px"
+  cursorStyle.top = offsetY + "px"
+}
 
-  codeLineContainerClick(event: any){
-    const offsetX = event.offsetX
-    const offsetY = event.offsetY
-    this.cursorStyle.left = offsetX + "px"
-    this.cursorStyle.top = offsetY + "px"
-  }
+const codeLineContainerClick = (event: any) => {
+  updateCursorOffset(event.offsetX,event.offsetY)
+  cursorInput.value?.focus()
+}
 
-  codeLineContainerKeyDown(event: any){
-    debugger
-    if(event.key === "Enter"){
-      const currentLine = this.createNewLine()
-      this.codeLines.push(currentLine)
-    } else if(event.key === "Backspace") {
-      this.currentLine.tokens.splice(this.currentLine.tokens.length - 1,1)
+const codeLineContainerKeyDown = (event: any) => {
+  if(event.key === "Enter"){
+    createNewLine()
+  } else if(event.key === "Backspace") {
+    if(currentLine.value.tokens.length === 1 && codeLines.length > 1) {
+      let length = codeLines.length - 2
+      currentLine.value = codeLines[length]
+      codeLines.splice(codeLines.length - 1,1)
     } else {
-      const data = event.data
-      this.currentLine.tokens.push({
-        type: "error",
-        value: data
-      })
+      currentLine.value.tokens.splice(currentLine.value.tokens.length - 1,1)
     }
+    cursorIndex.value = currentLine.value.tokens.length
+    updateCursorOffset(cursorIndex.value * fontSizeWidth,codeLines.length * codeLineHeight)
+    event.preventDefault()
   }
 }
+
+const codeInput = (event: any) => {
+  const data = event.data
+  currentLine.value.tokens.splice(cursorIndex.value,0,{
+    type: "",
+    value: data
+  })
+  if(cursorInput.value) {
+    cursorInput.value.value = ""
+  }
+  cursorIndex.value = currentLine.value.tokens.length
+  updateCursorOffset(cursorIndex.value * fontSizeWidth,null)
+}
+
+onMounted(() => {
+  createNewLine()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -105,13 +144,18 @@ export default class CodeEditor extends Vue {
   .Code-Line-Container{
     cursor: text;
     height: 100%;
-    width: calc(100% - 55px);
+    width: 100%;
     position: relative;
+    font-family: "Microsoft YaHei";
 
     .Code-Line {
       height: 20px;
       line-height: 20px;
-      padding: 0 5px;
+      // padding: 0 5px;
+      &.selected {
+        border-top: 1px solid rgb(133, 133, 133,.2);
+        border-bottom: 1px solid rgb(133, 133, 133,.2);
+      }
 
       span {
         color: rgb(133, 133, 133);
@@ -127,23 +171,14 @@ export default class CodeEditor extends Vue {
       background-color: rgb(133, 133, 133);
       display: inline-block;
       animation: cursor 1s ease infinite;
+
+      textarea {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
     }
   }
 
-  .Code-Input{
-    position: absolute;
-    height: 20px;
-    width: 1px;
-    border: none;
-    outline: none;
-    resize: none;
-  }
-  .Code-Input::after {
-    content:'';
-    display: block;
-    width:1px;
-    height:16px;
-    animation: blink 1s infinite steps(1, start)
-  }
 }
 </style>
