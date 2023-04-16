@@ -2,13 +2,13 @@
   <div class="Code-Editor">
     <div class="Code-Line-Number-Container">
       <div class="Code-Line-Number" v-for="(codeLine,index) in codeLines" :key="index">
-        {{index + 1}}
+        {{ index + 1 }}
       </div>
     </div>
     <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
       <div :class="['Code-Line',currentLine.key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
         <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
-          {{token.value}}
+          {{ token.value }}
         </span>
       </div>
       <div class="Cursor" :style="cursorStyle">
@@ -16,21 +16,19 @@
       </div>
     </div>
   </div>
-  <canvas></canvas>
+  <canvas ref="measureCanvas"></canvas>
 </template>
 
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
 
 const codeLineHeight = 20
-const fontSizeWidth = 8
 
 const codeLines: any = reactive([])
 let currentLine: any = ref()
+let currentToken: any = ref()
 
-const cursorOffsetX = ref<number>(0)
-const cursorOffsetY = ref<number>(0)
-const cursorIndex = ref<number>(0)
+const currentLineIndex = ref<number>(0)
 const cursorStyle: any = reactive({
   position: "absolute",
   left: "0px",
@@ -38,9 +36,9 @@ const cursorStyle: any = reactive({
 })
 const cursorInput = ref<HTMLTextAreaElement>()
 
+const measureCanvas =ref<HTMLCanvasElement>()
 const getTextWidth = (text: string) => {
-  const canvas: HTMLCanvasElement = document.createElement('canvas')
-  const ctx: any = canvas.getContext('2d')
+  const ctx: any = measureCanvas.value?.getContext('2d')
   ctx.font = '14px Microsoft YaHei'
   const textWidth = ctx.measureText(text).width
   return textWidth
@@ -49,47 +47,51 @@ const getTextWidth = (text: string) => {
 const createNewLine = () => {
   currentLine.value = reactive({
     key: codeLines.length + 1,
+    index: codeLines.length,
     tokens:[]
   })
   codeLines.push(currentLine.value)
-  updateCursorOffset(0,codeLines.length * codeLineHeight)
+  updateCursorPosition()
   return currentLine
 }
 
-const updateCursorOffset = (offsetX: number | null,offsetY: number | null) => {
-  if(offsetX !== null) {
-    cursorOffsetX.value = offsetX
-  }
-  if(offsetY !== null) {
-    cursorOffsetY.value = offsetY
-  }
-  updateCursorPosition()
-}
-
 const updateCursorPosition = () => {
-  let maxOffsetY = codeLines.length > 1 ? (codeLines.length - 1) * codeLineHeight : 0
-
-  let offsetX = cursorOffsetX.value
-  offsetX = offsetX < 0 ? 0 : offsetX
-  let offsetY;
-  if(maxOffsetY > cursorOffsetY.value) {
-    offsetY = cursorOffsetY.value
-  } else {
-    offsetY = maxOffsetY
-    offsetX = getCurrentLineWidth()
-  }
-
+  const offsetY = currentLine.value.index * codeLineHeight
+  const offsetX = currentToken.value ? getLineWidth(currentLine.value.tokens.slice(0,currentToken.value.index + 1)) : 0
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
 }
 
 const getCurrentLineWidth = () => {
-  const lineWidth = currentLine.value ? currentLine.value.tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
+  return currentLine.value ? getLineWidth(currentLine.value.tokens) : 0
+}
+const getLineWidth = (tokens: Array<any>) => {
+  const lineWidth = tokens ? tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
   return lineWidth
 }
 
 const codeLineContainerClick = (event: any) => {
-  updateCursorOffset(event.offsetX,event.offsetY)
+  const { clientX,clientY,offsetX,offsetY } = event
+
+  let currentLineIndex = Math.floor(clientY / codeLineHeight)
+  currentLineIndex = currentLineIndex >= codeLines.length ? codeLines.length - 1 : currentLineIndex
+  currentLine.value = codeLines[currentLineIndex]
+  
+  const tokens = currentLine.value.tokens
+  let currentLineWidth = 0
+  for(let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    currentLineWidth += token.width
+    if(currentLineWidth >= offsetX) {
+      currentToken.value = token
+      break
+    } else if(i === tokens.length - 1) {
+      currentToken.value = tokens[tokens.length - 1]
+      break
+    }
+  }
+
+  updateCursorPosition()
   cursorInput.value?.focus()
 }
 
@@ -104,24 +106,38 @@ const codeLineContainerKeyDown = (event: any) => {
     } else {
       currentLine.value.tokens.splice(currentLine.value.tokens.length - 1,1)
     }
-    cursorIndex.value = currentLine.value.tokens.length
-    updateCursorOffset(getCurrentLineWidth(),codeLines.length * codeLineHeight)
+    currentLineIndex.value = currentLine.value.tokens.length
+    updateCursorPosition()
     event.preventDefault()
+  } else if(event.key === "ArrowLeft") {
+    let currentTokenIndex = currentToken.value.index - 1
+    if(currentTokenIndex >= 0) {
+      currentToken.value = currentLine.value.tokens[currentTokenIndex]
+    }
+    updateCursorPosition()
+  } else if(event.key === "ArrowRight") {
+    let currentTokenIndex = currentToken.value.index + 1
+    if(currentTokenIndex < currentLine.value.tokens.length) {
+      currentToken.value = currentLine.value.tokens[currentTokenIndex]
+    }
+    updateCursorPosition()
   }
 }
 
 const inputHander = (event: any) => {
-  const data = event.data
-  currentLine.value.tokens.splice(cursorIndex.value,0,{
+  let data = event.data
+  currentToken.value = reactive({
+    index: currentLine.value.tokens.length,
     type: "",
     value: data,
     width: data ? getTextWidth(data) : 0
   })
+  currentLine.value.tokens.splice(currentLineIndex.value,0,currentToken.value)
   if(cursorInput.value) {
     cursorInput.value.value = ""
   }
-  cursorIndex.value = currentLine.value.tokens.length
-  updateCursorOffset(getCurrentLineWidth(),null)
+  currentLineIndex.value = currentLine.value.tokens.length
+  updateCursorPosition()
 }
 const codeInput = (event: any) => {
   if("insertCompositionText" === event.inputType) {
@@ -155,7 +171,7 @@ onMounted(() => {
     height: 100%;
     width: 35px;
     min-width: 35px;
-    border-right: 1px solid rgba(133, 133, 133,.3);
+    user-select: none;
 
     .Code-Line-Number{
       color: rgb(133,133,133);
