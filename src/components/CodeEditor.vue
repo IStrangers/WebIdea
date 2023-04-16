@@ -75,7 +75,6 @@ const updateCursorPosition = () => {
   if(cursorOffsetY.value < offsetY) {
     offsetY = cursorOffsetY.value
   }
-  console.log(offsetX)
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
 }
