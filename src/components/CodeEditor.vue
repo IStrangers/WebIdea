@@ -27,8 +27,8 @@ const codeLineHeight = 20
 const codeLines: any = reactive([])
 let currentLine: any = ref()
 let currentToken: any = ref()
+let currentTokenIndex = 0
 
-const currentLineIndex = ref<number>(0)
 const cursorStyle: any = reactive({
   position: "absolute",
   left: "0px",
@@ -44,27 +44,58 @@ const getTextWidth = (text: string) => {
   return textWidth
 }
 
-const createNewLine = () => {
-  currentLine.value = reactive({
-    key: codeLines.length + 1,
-    index: codeLines.length,
-    tokens:[]
-  })
-  codeLines.push(currentLine.value)
+const getCurrentLine = () => currentLine.value
+const getCurrentToken = () => currentToken.value
+
+const createToken = (index: number,type: string,value: string,width: number) => {
+  currentToken.value = {
+    index,
+    type,
+    value,
+    width,
+  }
+  return currentToken
+}
+
+const createLineFeedToken = () => {
+  const token = createToken(0,"","\n",0)
+  currentTokenIndex = 1
+  return token
+}
+
+const createNewCodeLine = () => {
+  const index = codeLines.length
+  const token = createLineFeedToken().value
+  const tokens = [token]
+  return createCodeLine(index,tokens)
+}
+
+const createCodeLine = (index: number,tokens: Array<any>,pushIndex?: number) => {
+  return addCodeLine({
+    key: new Date().getTime() + "-" + Math.random(),
+    index,
+    tokens,
+  },pushIndex)
+}
+
+const addCodeLine = (codeLine: any,pushIndex?: number) => {
+  currentLine.value = codeLine
+  if(pushIndex) {
+    codeLines.splice(pushIndex,0,codeLine)
+  } else {
+    codeLines.push(codeLine)
+  }
   updateCursorPosition()
   return currentLine
 }
 
 const updateCursorPosition = () => {
-  const offsetY = currentLine.value.index * codeLineHeight
-  const offsetX = currentToken.value ? getLineWidth(currentLine.value.tokens.slice(0,currentToken.value.index + 1)) : 0
+  const offsetY = getCurrentLine().index * codeLineHeight
+  const offsetX = currentToken.value ? getLineWidth(getCurrentLine().tokens.slice(0,getCurrentToken().index + 1)) : 0
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
 }
 
-const getCurrentLineWidth = () => {
-  return currentLine.value ? getLineWidth(currentLine.value.tokens) : 0
-}
 const getLineWidth = (tokens: Array<any>) => {
   const lineWidth = tokens ? tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
   return lineWidth
@@ -77,7 +108,7 @@ const codeLineContainerClick = (event: any) => {
   currentLineIndex = currentLineIndex >= codeLines.length ? codeLines.length - 1 : currentLineIndex
   currentLine.value = codeLines[currentLineIndex]
   
-  const tokens = currentLine.value.tokens
+  const tokens = getCurrentLine().tokens
   let currentLineWidth = 0
   for(let i = 0; i < tokens.length; i++) {
     const token = tokens[i]
@@ -96,47 +127,55 @@ const codeLineContainerClick = (event: any) => {
 }
 
 const codeLineContainerKeyDown = (event: any) => {
+  const currentTokens = getCurrentLine().tokens
   if(event.key === "Enter"){
-    createNewLine()
+    if(getCurrentToken().index === currentTokens.length - 1) {
+      createNewCodeLine()
+    } else {
+      const newLineTokens = currentTokens.splice(getCurrentToken().index + 1,currentTokens.length)
+      const lineFeedToken = createLineFeedToken()
+      newLineTokens.splice(0,0,lineFeedToken.value)
+      createCodeLine(0,newLineTokens,getCurrentLine().index + 1)
+    }
+    event.preventDefault()
   } else if(event.key === "Backspace") {
-    if(currentLine.value.tokens.length === 1 && codeLines.length > 1) {
+    if(currentTokens.length === 1 && codeLines.length > 1) {
       let length = codeLines.length - 2
       currentLine.value = codeLines[length]
       codeLines.splice(codeLines.length - 1,1)
     } else {
-      currentLine.value.tokens.splice(currentLine.value.tokens.length - 1,1)
+      currentTokens.splice(currentTokens.length - 1,1)
     }
-    currentLineIndex.value = currentLine.value.tokens.length
+    currentTokenIndex = currentTokens.length
     updateCursorPosition()
-    event.preventDefault()
   } else if(event.key === "ArrowLeft") {
-    let currentTokenIndex = currentToken.value.index - 1
+    let currentTokenIndex = getCurrentToken().index - 1
     if(currentTokenIndex >= 0) {
-      currentToken.value = currentLine.value.tokens[currentTokenIndex]
+      currentToken.value = currentTokens[currentTokenIndex]
     }
     updateCursorPosition()
   } else if(event.key === "ArrowRight") {
-    let currentTokenIndex = currentToken.value.index + 1
-    if(currentTokenIndex < currentLine.value.tokens.length) {
-      currentToken.value = currentLine.value.tokens[currentTokenIndex]
+    let currentTokenIndex = getCurrentToken().index + 1
+    if(currentTokenIndex < currentTokens.length) {
+      currentToken.value = currentTokens[currentTokenIndex]
     }
     updateCursorPosition()
   }
 }
 
 const inputHander = (event: any) => {
-  let data = event.data
-  currentToken.value = reactive({
-    index: currentLine.value.tokens.length,
-    type: "",
-    value: data,
-    width: data ? getTextWidth(data) : 0
-  })
-  currentLine.value.tokens.splice(currentLineIndex.value,0,currentToken.value)
+  const currentTokens = getCurrentLine().tokens
+  const data = event.data
+  const index = currentTokens.length
+  const type = ""
+  const value = data
+  const width = data ? getTextWidth(data) : 0
+  const token = createToken(index,type,value,width).value
+  currentTokens.splice(currentTokenIndex,0,token)
   if(cursorInput.value) {
     cursorInput.value.value = ""
   }
-  currentLineIndex.value = currentLine.value.tokens.length
+  currentTokenIndex = currentTokens.length
   updateCursorPosition()
 }
 const codeInput = (event: any) => {
@@ -147,7 +186,7 @@ const codeInput = (event: any) => {
 }
 
 onMounted(() => {
-  createNewLine()
+  createNewCodeLine()
 })
 </script>
 
@@ -189,12 +228,14 @@ onMounted(() => {
     font-family: "Microsoft YaHei";
 
     .Code-Line {
+      box-sizing: border-box;
       height: 20px;
       line-height: 20px;
 
       &.selected {
         border-top: 1px solid rgb(133, 133, 133,.2);
         border-bottom: 1px solid rgb(133, 133, 133,.2);
+        line-height: 18px;
       }
 
       span {
