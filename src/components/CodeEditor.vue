@@ -128,8 +128,8 @@ const codeLineContainerClick = (event: any) => {
 }
 
 const codeLineContainerKeyDown = (event: any) => {
-  const currentTokens = getCurrentLine().tokens
   if(event.key === "Enter"){
+    const currentTokens = getCurrentLine().tokens
     if(currentTokenIndex === currentTokens.length - 1) {
       createNewCodeLine()
     } else {
@@ -140,23 +140,31 @@ const codeLineContainerKeyDown = (event: any) => {
     }
     event.preventDefault()
   } else if(event.key === "Backspace") {
-    if(currentTokens.length === 1 && codeLines.length > 1) {
+    if(currentTokenIndex === 0 && codeLines.length > 1) {
+      let oldTokens = getCurrentLine().tokens
       currentLine.value = codeLines[currentLineIndex - 1]
       codeLines.splice(currentLineIndex,1)
       currentLineIndex--
-      currentTokenIndex = getCurrentLine().tokens.length
+      const currentTokens = getCurrentLine().tokens
+      currentTokenIndex = currentTokens.length - 1
+      if(oldTokens.length > 1) {
+        currentTokens.push(...oldTokens.slice(1))
+      }
     } else if(currentTokenIndex > 0) {
+      const currentTokens = getCurrentLine().tokens
       currentTokens.splice(currentTokenIndex,1)
       currentTokenIndex--
     }
     updateCursorPosition()
   } else if(event.key === "ArrowLeft") {
     if(currentTokenIndex - 1 >= 0) {
+      const currentTokens = getCurrentLine().tokens
       currentTokenIndex--
       currentToken.value = currentTokens[currentTokenIndex]
     }
     updateCursorPosition()
   } else if(event.key === "ArrowRight") {
+    const currentTokens = getCurrentLine().tokens
     if(currentTokenIndex + 1 < currentTokens.length) {
       currentTokenIndex++
       currentToken.value = currentTokens[currentTokenIndex]
@@ -201,7 +209,7 @@ onMounted(() => {
 .Code-Editor {
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  // border-radius: 4px;
   background-color: rgb(30,30,30);
   font-size: 14px;
   display: flex;
