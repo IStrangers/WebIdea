@@ -6,7 +6,7 @@
       </div>
     </div>
     <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
-      <div :class="['Code-Line',currentLine.key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
+      <div :class="['Code-Line',getCurrentLine().key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
         <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
           {{ token.value }}
         </span>
@@ -21,21 +21,14 @@
 
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
-
 const codeLineHeight = 20
 
-const codeLines: any = reactive([])
-let currentLine: any = ref()
-let currentToken: any = ref()
-let currentLineIndex = -1
-let currentTokenIndex = 0
-
+const cursorInput = ref<HTMLTextAreaElement>()
 const cursorStyle: any = reactive({
   position: "absolute",
   left: "0px",
   top: "0px"
 })
-const cursorInput = ref<HTMLTextAreaElement>()
 
 const measureCanvas = ref<HTMLCanvasElement>()
 const getTextWidth = (text: string) => {
@@ -45,18 +38,19 @@ const getTextWidth = (text: string) => {
   return textWidth
 }
 
-const getCurrentLine = () => currentLine.value
-const getCurrentToken = () => currentToken.value
+const codeLines: any = reactive([])
+let currentLineIndex = -1
+let currentTokenIndex = 0
+const getCurrentLine = () => codeLines[currentLineIndex]
+const getCurrentToken = () => getCurrentLine().tokens[currentTokenIndex]
 
 const createToken = (type: string,value: string,width: number) => {
-  currentToken.value = {
+  return {
     type,
     value,
     width,
   }
-  return currentToken
 }
-
 const createLineFeedToken = () => {
   const token = createToken("","\n",0)
   currentTokenIndex = 0
@@ -64,20 +58,17 @@ const createLineFeedToken = () => {
 }
 
 const createNewCodeLine = () => {
-  const token = createLineFeedToken().value
+  const token = createLineFeedToken()
   const tokens = [token]
-  return createCodeLine(tokens)
+  createCodeLine(tokens)
 }
-
 const createCodeLine = (tokens: Array<any>,pushIndex?: number) => {
-  return addCodeLine({
+  addCodeLine({
     key: new Date().getTime() + "-" + Math.random(),
     tokens,
   },pushIndex)
 }
-
 const addCodeLine = (codeLine: any,pushIndex?: number) => {
-  currentLine.value = codeLine
   if(pushIndex) {
     codeLines.splice(pushIndex,0,codeLine)
   } else {
@@ -85,7 +76,10 @@ const addCodeLine = (codeLine: any,pushIndex?: number) => {
   }
   currentLineIndex++
   updateCursorPosition()
-  return currentLine
+}
+const getLineWidth = (tokens: Array<any>) => {
+  const lineWidth = tokens ? tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
+  return lineWidth
 }
 
 const updateCursorPosition = () => {
@@ -95,17 +89,11 @@ const updateCursorPosition = () => {
   cursorStyle.top = offsetY + "px"
 }
 
-const getLineWidth = (tokens: Array<any>) => {
-  const lineWidth = tokens ? tokens.reduce((width: number,token2: any) => width + token2.width,0) : 0
-  return lineWidth
-}
-
 const codeLineContainerClick = (event: any) => {
-  const { clientX,clientY,offsetX,offsetY } = event
+  const { clientY,offsetX } = event
 
   currentLineIndex = Math.floor(clientY / codeLineHeight)
   currentLineIndex = currentLineIndex >= codeLines.length ? codeLines.length - 1 : currentLineIndex
-  currentLine.value = codeLines[currentLineIndex]
   
   const tokens = getCurrentLine().tokens
   let currentLineWidth = 0
@@ -113,11 +101,9 @@ const codeLineContainerClick = (event: any) => {
     const token = tokens[i]
     currentLineWidth += token.width
     if(currentLineWidth >= offsetX) {
-      currentToken.value = token
       currentTokenIndex = i
       break
     } else if(i === tokens.length - 1) {
-      currentToken.value = tokens[tokens.length - 1]
       currentTokenIndex = i
       break
     }
@@ -135,14 +121,13 @@ const codeLineContainerKeyDown = (event: any) => {
     } else {
       const newLineTokens = currentTokens.splice(currentTokenIndex + 1,currentTokens.length)
       const lineFeedToken = createLineFeedToken()
-      newLineTokens.splice(0,0,lineFeedToken.value)
+      newLineTokens.splice(0,0,lineFeedToken)
       createCodeLine(newLineTokens,currentLineIndex + 1)
     }
     event.preventDefault()
   } else if(event.key === "Backspace") {
     if(currentTokenIndex === 0 && codeLines.length > 1) {
       let oldTokens = getCurrentLine().tokens
-      currentLine.value = codeLines[currentLineIndex - 1]
       codeLines.splice(currentLineIndex,1)
       currentLineIndex--
       const currentTokens = getCurrentLine().tokens
@@ -158,16 +143,20 @@ const codeLineContainerKeyDown = (event: any) => {
     updateCursorPosition()
   } else if(event.key === "ArrowLeft") {
     if(currentTokenIndex - 1 >= 0) {
-      const currentTokens = getCurrentLine().tokens
       currentTokenIndex--
-      currentToken.value = currentTokens[currentTokenIndex]
+    } else if(currentLineIndex - 1 >= 0) {
+      currentLineIndex--
+      const currentTokens = getCurrentLine().tokens
+      currentTokenIndex = currentTokens.length - 1
     }
     updateCursorPosition()
   } else if(event.key === "ArrowRight") {
     const currentTokens = getCurrentLine().tokens
     if(currentTokenIndex + 1 < currentTokens.length) {
       currentTokenIndex++
-      currentToken.value = currentTokens[currentTokenIndex]
+    } else if(currentLineIndex + 1 < codeLines.length) {
+      currentLineIndex++
+      currentTokenIndex = 0
     }
     updateCursorPosition()
   }
@@ -179,7 +168,7 @@ const inputHander = (event: any) => {
   const type = ""
   const value = data
   const width = data ? getTextWidth(data) : 0
-  const token = createToken(type,value,width).value
+  const token = createToken(type,value,width)
   currentTokenIndex++
   currentTokens.splice(currentTokenIndex,0,token)
   if(cursorInput.value) {
