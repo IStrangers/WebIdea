@@ -14,9 +14,9 @@
       <div class="Cursor" :style="cursorStyle">
         <textarea ref="cursorInput" autofocus="true" @input="codeInput" @compositionend="inputHander"></textarea>
       </div>
+      <canvas ref="measureCanvas" style="display: none;"></canvas>
     </div>
   </div>
-  <canvas ref="measureCanvas"></canvas>
 </template>
 
 <script lang="ts" setup>
@@ -36,7 +36,7 @@ const cursorStyle: any = reactive({
 })
 const cursorInput = ref<HTMLTextAreaElement>()
 
-const measureCanvas =ref<HTMLCanvasElement>()
+const measureCanvas = ref<HTMLCanvasElement>()
 const getTextWidth = (text: string) => {
   const ctx: any = measureCanvas.value?.getContext('2d')
   ctx.font = '14px Microsoft YaHei'
