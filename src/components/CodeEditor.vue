@@ -27,6 +27,7 @@ const codeLineHeight = 20
 const codeLines: any = reactive([])
 let currentLine: any = ref()
 let currentToken: any = ref()
+let currentLineIndex = -1
 let currentTokenIndex = 0
 
 const cursorStyle: any = reactive({
@@ -47,9 +48,8 @@ const getTextWidth = (text: string) => {
 const getCurrentLine = () => currentLine.value
 const getCurrentToken = () => currentToken.value
 
-const createToken = (index: number,type: string,value: string,width: number) => {
+const createToken = (type: string,value: string,width: number) => {
   currentToken.value = {
-    index,
     type,
     value,
     width,
@@ -58,22 +58,20 @@ const createToken = (index: number,type: string,value: string,width: number) => 
 }
 
 const createLineFeedToken = () => {
-  const token = createToken(0,"","\n",0)
-  currentTokenIndex = 1
+  const token = createToken("","\n",0)
+  currentTokenIndex = 0
   return token
 }
 
 const createNewCodeLine = () => {
-  const index = codeLines.length
   const token = createLineFeedToken().value
   const tokens = [token]
-  return createCodeLine(index,tokens)
+  return createCodeLine(tokens)
 }
 
-const createCodeLine = (index: number,tokens: Array<any>,pushIndex?: number) => {
+const createCodeLine = (tokens: Array<any>,pushIndex?: number) => {
   return addCodeLine({
     key: new Date().getTime() + "-" + Math.random(),
-    index,
     tokens,
   },pushIndex)
 }
@@ -85,13 +83,14 @@ const addCodeLine = (codeLine: any,pushIndex?: number) => {
   } else {
     codeLines.push(codeLine)
   }
+  currentLineIndex++
   updateCursorPosition()
   return currentLine
 }
 
 const updateCursorPosition = () => {
-  const offsetY = getCurrentLine().index * codeLineHeight
-  const offsetX = currentToken.value ? getLineWidth(getCurrentLine().tokens.slice(0,getCurrentToken().index + 1)) : 0
+  const offsetY = currentLineIndex * codeLineHeight
+  const offsetX = getCurrentToken() ? getLineWidth(getCurrentLine().tokens.slice(0,currentTokenIndex + 1)) : 0
   cursorStyle.left = offsetX + "px"
   cursorStyle.top = offsetY + "px"
 }
@@ -104,7 +103,7 @@ const getLineWidth = (tokens: Array<any>) => {
 const codeLineContainerClick = (event: any) => {
   const { clientX,clientY,offsetX,offsetY } = event
 
-  let currentLineIndex = Math.floor(clientY / codeLineHeight)
+  currentLineIndex = Math.floor(clientY / codeLineHeight)
   currentLineIndex = currentLineIndex >= codeLines.length ? codeLines.length - 1 : currentLineIndex
   currentLine.value = codeLines[currentLineIndex]
   
@@ -115,9 +114,11 @@ const codeLineContainerClick = (event: any) => {
     currentLineWidth += token.width
     if(currentLineWidth >= offsetX) {
       currentToken.value = token
+      currentTokenIndex = i
       break
     } else if(i === tokens.length - 1) {
       currentToken.value = tokens[tokens.length - 1]
+      currentTokenIndex = i
       break
     }
   }
@@ -129,34 +130,35 @@ const codeLineContainerClick = (event: any) => {
 const codeLineContainerKeyDown = (event: any) => {
   const currentTokens = getCurrentLine().tokens
   if(event.key === "Enter"){
-    if(getCurrentToken().index === currentTokens.length - 1) {
+    if(currentTokenIndex === currentTokens.length - 1) {
       createNewCodeLine()
     } else {
-      const newLineTokens = currentTokens.splice(getCurrentToken().index + 1,currentTokens.length)
+      const newLineTokens = currentTokens.splice(currentTokenIndex + 1,currentTokens.length)
       const lineFeedToken = createLineFeedToken()
       newLineTokens.splice(0,0,lineFeedToken.value)
-      createCodeLine(0,newLineTokens,getCurrentLine().index + 1)
+      createCodeLine(newLineTokens,currentLineIndex + 1)
     }
     event.preventDefault()
   } else if(event.key === "Backspace") {
     if(currentTokens.length === 1 && codeLines.length > 1) {
-      let length = codeLines.length - 2
-      currentLine.value = codeLines[length]
-      codeLines.splice(codeLines.length - 1,1)
-    } else {
-      currentTokens.splice(currentTokens.length - 1,1)
+      currentLine.value = codeLines[currentLineIndex - 1]
+      codeLines.splice(currentLineIndex,1)
+      currentLineIndex--
+      currentTokenIndex = getCurrentLine().tokens.length
+    } else if(currentTokenIndex > 0) {
+      currentTokens.splice(currentTokenIndex,1)
+      currentTokenIndex--
     }
-    currentTokenIndex = currentTokens.length
     updateCursorPosition()
   } else if(event.key === "ArrowLeft") {
-    let currentTokenIndex = getCurrentToken().index - 1
-    if(currentTokenIndex >= 0) {
+    if(currentTokenIndex - 1 >= 0) {
+      currentTokenIndex--
       currentToken.value = currentTokens[currentTokenIndex]
     }
     updateCursorPosition()
   } else if(event.key === "ArrowRight") {
-    let currentTokenIndex = getCurrentToken().index + 1
-    if(currentTokenIndex < currentTokens.length) {
+    if(currentTokenIndex + 1 < currentTokens.length) {
+      currentTokenIndex++
       currentToken.value = currentTokens[currentTokenIndex]
     }
     updateCursorPosition()
@@ -166,16 +168,15 @@ const codeLineContainerKeyDown = (event: any) => {
 const inputHander = (event: any) => {
   const currentTokens = getCurrentLine().tokens
   const data = event.data
-  const index = currentTokens.length
   const type = ""
   const value = data
   const width = data ? getTextWidth(data) : 0
-  const token = createToken(index,type,value,width).value
+  const token = createToken(type,value,width).value
+  currentTokenIndex++
   currentTokens.splice(currentTokenIndex,0,token)
   if(cursorInput.value) {
     cursorInput.value.value = ""
   }
-  currentTokenIndex = currentTokens.length
   updateCursorPosition()
 }
 const codeInput = (event: any) => {
