@@ -30,7 +30,7 @@ const cursorStyle: any = reactive({
   top: "0px"
 })
 
-const measureCache = new Map<String,Number>()
+const measureCache = new Map<string,number>()
 const measureCanvas = ref<HTMLCanvasElement>()
 const getTextWidth = (text: string) => {
   let textWidth = measureCache.get(text)
@@ -38,7 +38,8 @@ const getTextWidth = (text: string) => {
   const ctx: any = measureCanvas.value?.getContext('2d')
   ctx.font = '14px Microsoft YaHei'
   textWidth = ctx.measureText(text).width
-  measureCache.set(text,textWidth ? textWidth : 0)
+  textWidth = textWidth ? textWidth : 0
+  measureCache.set(text,textWidth)
   return textWidth
 }
 
