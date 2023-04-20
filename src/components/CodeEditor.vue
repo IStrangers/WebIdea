@@ -13,8 +13,8 @@
       </div>
       <div class="Cursor" :style="cursorStyle">
         <textarea ref="cursorInput" autofocus="true" @input="codeInput" @compositionend="inputHander"></textarea>
+        <canvas ref="measureCanvas" style="display: none;"></canvas>
       </div>
-      <canvas ref="measureCanvas" style="display: none;"></canvas>
     </div>
   </div>
 </template>
@@ -30,11 +30,15 @@ const cursorStyle: any = reactive({
   top: "0px"
 })
 
+const measureCache = new Map<String,Number>()
 const measureCanvas = ref<HTMLCanvasElement>()
 const getTextWidth = (text: string) => {
+  let textWidth = measureCache.get(text)
+  if(textWidth) return textWidth
   const ctx: any = measureCanvas.value?.getContext('2d')
   ctx.font = '14px Microsoft YaHei'
-  const textWidth = ctx.measureText(text).width
+  textWidth = ctx.measureText(text).width
+  measureCache.set(text,textWidth ? textWidth : 0)
   return textWidth
 }
 
@@ -185,13 +189,18 @@ const codeLineContainerKeyDown = (event: any) => {
 }
 
 const inputHander = (event: any) => {
-  const currentTokens = getCurrentLine().tokens
   const data = event.data
-  const type = ""
-  const value = data
-  const width = data ? getTextWidth(data) : 0
-  const token = createToken(type,value,width)
+  let token
+  if(data === " ") {
+    token = createToken("BlankSpace"," ",5)
+  } else {
+    const type = ""
+    const value = data
+    const width = data ? getTextWidth(data) : 0
+    token = createToken(type,value,width)
+  }
   currentTokenIndex++
+  const currentTokens = getCurrentLine().tokens
   currentTokens.splice(currentTokenIndex,0,token)
   if(cursorInput.value) {
     cursorInput.value.value = ""
@@ -259,9 +268,13 @@ onMounted(() => {
       }
 
       span {
+        display: inline-block;
         color: rgb(133, 133, 133);
-        &.error {
+        &.Error {
           color: red;
+        }
+        &.BlankSpace {
+          width: 5px;
         }
       }
     }
