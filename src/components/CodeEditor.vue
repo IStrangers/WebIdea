@@ -126,7 +126,7 @@ const codeLineContainerKeyDown = (event: any) => {
     }
     event.preventDefault()
   } else if(event.key === "Backspace") {
-    if(currentTokenIndex === 0 && currentLineIndex > 0 && codeLines.length > 1 ) {
+    if(currentTokenIndex === 0 && currentLineIndex > 0 && codeLines.length > 1) {
       let oldTokens = getCurrentLine().tokens
       codeLines.splice(currentLineIndex,1)
       currentLineIndex--
@@ -135,30 +135,52 @@ const codeLineContainerKeyDown = (event: any) => {
       if(oldTokens.length > 1) {
         currentTokens.push(...oldTokens.slice(1))
       }
+      updateCursorPosition()
     } else if(currentTokenIndex > 0) {
       const currentTokens = getCurrentLine().tokens
       currentTokens.splice(currentTokenIndex,1)
       currentTokenIndex--
+      updateCursorPosition()
     }
-    updateCursorPosition()
   } else if(event.key === "ArrowLeft") {
     if(currentTokenIndex - 1 >= 0) {
       currentTokenIndex--
+      updateCursorPosition()
     } else if(currentLineIndex - 1 >= 0) {
       currentLineIndex--
       const currentTokens = getCurrentLine().tokens
       currentTokenIndex = currentTokens.length - 1
+      updateCursorPosition()
     }
-    updateCursorPosition()
   } else if(event.key === "ArrowRight") {
     const currentTokens = getCurrentLine().tokens
     if(currentTokenIndex + 1 < currentTokens.length) {
       currentTokenIndex++
+      updateCursorPosition()
     } else if(currentLineIndex + 1 < codeLines.length) {
       currentLineIndex++
       currentTokenIndex = 0
+      updateCursorPosition()
     }
-    updateCursorPosition()
+    
+  } else if(event.key === "ArrowUp") {
+    if(currentLineIndex > 0) {
+      currentLineIndex--
+      const currentTokens = getCurrentLine().tokens
+      if(currentTokens.length <= currentTokenIndex) {
+        currentTokenIndex = currentTokens.length - 1
+      }
+      updateCursorPosition()
+    }
+  } else if(event.key === "ArrowDown") {
+    if(currentLineIndex < codeLines.length - 1) {
+      currentLineIndex++
+      const currentTokens = getCurrentLine().tokens
+      if(currentTokens.length <= currentTokenIndex) {
+        currentTokenIndex = currentTokens.length - 1
+      }
+      updateCursorPosition()
+    }
   }
 }
 
