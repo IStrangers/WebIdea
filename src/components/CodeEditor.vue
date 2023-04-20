@@ -6,7 +6,7 @@
       </div>
     </div>
     <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
-      <div :class="['Code-Line',getCurrentLine().key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
+      <div :class="['Code-Line',getCurrentLine().key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="codeLine.key">
         <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
           {{ token.value }}
         </span>
@@ -126,7 +126,7 @@ const codeLineContainerKeyDown = (event: any) => {
     }
     event.preventDefault()
   } else if(event.key === "Backspace") {
-    if(currentTokenIndex === 0 && codeLines.length > 1) {
+    if(currentTokenIndex === 0 && currentLineIndex > 0 && codeLines.length > 1 ) {
       let oldTokens = getCurrentLine().tokens
       codeLines.splice(currentLineIndex,1)
       currentLineIndex--
