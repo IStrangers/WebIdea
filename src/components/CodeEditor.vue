@@ -99,7 +99,7 @@ const codeLineContainerClick = (event: any) => {
 
   currentLineIndex = Math.floor(clientY / codeLineHeight)
   currentLineIndex = currentLineIndex >= codeLines.length ? codeLines.length - 1 : currentLineIndex
-  
+
   const tokens = getCurrentLine().tokens
   let currentLineWidth = 0
   for(let i = 0; i < tokens.length; i++) {
@@ -269,13 +269,12 @@ onMounted(() => {
       }
 
       span {
-        display: inline-block;
         color: rgb(133, 133, 133);
         &.Error {
           color: red;
         }
         &.BlankSpace {
-          width: 5px;
+          padding: 0 2.5px;
         }
       }
     }
