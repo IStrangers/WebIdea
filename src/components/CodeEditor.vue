@@ -6,9 +6,9 @@
       </div>
     </div>
     <div class="Code-Line-Container" @click="codeLineContainerClick" @keydown="codeLineContainerKeyDown">
-      <div :class="['Code-Line',getCurrentLine().key === codeLine.key ? 'selected' : '']" v-for="(codeLine,index) in codeLines" :key="codeLine.key">
+      <div :class="['Code-Line',getCurrentLine().key === codeLine.key ? 'Selected' : '']" v-for="(codeLine,index) in codeLines" :key="codeLine.key">
         <span v-for="(token,index) in codeLine.tokens" :key="index" :class="token.type">
-          {{ token.value }}
+          {{ token.type === "BlankSpace" ? "" : token.value }}
         </span>
       </div>
       <div class="Cursor" :style="cursorStyle">
@@ -235,12 +235,12 @@ onMounted(() => {
   font-size: 14px;
   display: flex;
   overflow: auto;
+  user-select: none;
 
   .Code-Line-Number-Container{
     height: 100%;
     width: 35px;
     min-width: 35px;
-    user-select: none;
 
     .Code-Line-Number{
       color: rgb(133,133,133);
@@ -262,7 +262,7 @@ onMounted(() => {
       height: 20px;
       line-height: 20px;
 
-      &.selected {
+      &.Selected {
         border-top: 1px solid rgb(133, 133, 133,.2);
         border-bottom: 1px solid rgb(133, 133, 133,.2);
         line-height: 18px;
