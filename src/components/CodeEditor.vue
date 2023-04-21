@@ -1,7 +1,7 @@
 <template>
   <div class="Code-Editor">
     <div class="Code-Line-Number-Container">
-      <div class="Code-Line-Number" v-for="(codeLine,index) in codeLines" :key="index">
+      <div :class="['Code-Line-Number',currentLineIndex === index ? 'Selected' : '']" v-for="(codeLine,index) in codeLines" :key="index">
         {{ index + 1 }}
       </div>
     </div>
@@ -247,6 +247,10 @@ onMounted(() => {
       text-align: center;
       height: 20px;
       line-height: 20px;
+
+      &.Selected{
+        color: white;
+      }
     }
   }
 
