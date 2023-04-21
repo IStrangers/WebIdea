@@ -20,7 +20,12 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, defineProps } from 'vue'
+
+const props = defineProps<{
+  language: string
+}>()
+
 const codeLineHeight = 20
 
 const cursorInput = ref<HTMLTextAreaElement>()

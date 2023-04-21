@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import CodeEditor from './components/CodeEditor.vue'
+const language = "JavaScript"
 </script>
 
 <template>
   <div class="container">
-    <CodeEditor></CodeEditor>
+    <CodeEditor :language="language"></CodeEditor>
   </div>
 </template>
 
